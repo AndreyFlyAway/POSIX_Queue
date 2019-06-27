@@ -6,6 +6,7 @@
 #define POSIX_QUEUE_POSIX_QUEUE_H
 
 #include <mqueue.h>
+#include <pthread.h>
 #include <sys/stat.h> /* constants for argument mode (for creating POSIX queue) */
 #include <sys/fcntl.h> /* constants of type Q_*/
 #include "LockedShMemTest.h"
@@ -14,9 +15,8 @@
 #define	MQ_MAX_MSG_NUM	           32
 #define	MSGS_NUM    	           16
 
-
-int queue_test(void);
-int creat_queue(mqd_t *mqd, const char *mq_name, int flags=(O_RDWR | O_EXCL), u_int mq_msg_size=sizeof(ShMem));
-int del_queue(const char * q_name);
-
+int queueTest(void);
+static void notifySetup(mqd_t *mqdp);
+static void threadFunc(union sigval sv);
+static void notifySetup(mqd_t *mqdp);
 #endif //POSIX_QUEUE_POSIX_QUEUE_H

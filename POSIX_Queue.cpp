@@ -4,30 +4,37 @@
 
 #include "POSIX_Queue.h"
 
-int creat_queue(mqd_t *mqd, const char *mq_name, int flags, u_int mq_msg_size)
-{
-    struct mq_attr q_attr;
-    q_attr.mq_msgsize = mq_msg_size;
-    mode_t perms = (S_IRUSR | S_IWUSR);
-    *mqd = mq_open(mq_name, flags, perms, q_attr);
-    // TODO: check if queue exists already
-    if ((*mqd) == (mqd_t) -1)
+static void threadFunc(union sigval sv) {
+    ssize_t numRead;
+    mqd_t *mqdp;
+    void *buffer;
+    struct ShMem *shmp;
+    struct mq_attr attr;
+
+    mqdp = (mqd_t *) sv.sival_ptr;
+    if (mq_getattr(*mqdp, &attr) == -1) {
+        printf("ERROR: cant get attributes from queue with descriptor %d", mqdp);
+        pthread_exit(NULL);
+    }
+    buffer = malloc(attr.mq_maxmsg);
+    if (buffer == NULL) {
+        printf("ERROR: cant call malloc for buffer with size %d", attr.mq_maxmsg);
+        pthread_exit(NULL);
+    }
+
+    //notyfySetup(mqdp);
+
+    while ((numRead = mq_receive(*mqdp, (char*)buffer, attr.mq_msgsize, NULL)) >= 0)
     {
-        printf("ERROR: cant create queue with name %s\n", mq_name);
-        return -1;
-    } else
-        return (int)(*mqd);
+        shmp = (ShMem*)(buffer);
+        printf("Read %d bytes: %s %u %f", numRead, shmp->ch_data, shmp->ui_data, shmp->fl_data);
+    }
+
+    free(buffer);
+    pthread_exit(NULL);
 }
 
-int del_queue(const char * q_name)
-{
-    mqd_t mqd = mq_open(q_name, O_RDWR);
-    int res = mq_close(mqd);
-    printf("Delete res %d", res);
-    return res;
-}
-
-int queue_test(void)
+int queueTest(void)
 {
     mqd_t mqd;
 //    char q_name[] = "/mq-l";
