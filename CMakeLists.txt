@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.9)
-project(PosixQueueLern)
+project(PosixRecieveTread)
+project(PosixQueueCreate)
+project(PosixQueueSend)
+project(PosixQueueDelete)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pthread -std=c++11 -Wno-long-long")
@@ -9,6 +12,12 @@ set(SHMEM_DIR /home/user/tests/LockedShmemTest/)
 
 include_directories(/home/user/tests/LockedShmemTest/)
 
-add_executable(PosixQueueLern main.cpp POSIX_Queue.cpp POSIX_Queue.h)
+add_executable(PosixRecieveTread main.cpp POSIX_Queue.cpp POSIX_Queue.h)
+add_executable(PosixQueueCreate creat_queue.cpp POSIX_Queue.h)
+add_executable(PosixQueueSend send_msgs.cpp POSIX_Queue.h)
+add_executable(PosixQueueDelete delete_queue.cpp POSIX_Queue.h)
 
-target_link_libraries(PosixQueueLern rt)
+target_link_libraries(PosixRecieveTread rt)
+target_link_libraries(PosixQueueCreate rt)
+target_link_libraries(PosixQueueSend rt)
+target_link_libraries(PosixQueueDelete rt)

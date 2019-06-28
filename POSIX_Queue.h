@@ -14,9 +14,8 @@
 // constants
 #define	MQ_MAX_MSG_NUM	           32
 #define	MSGS_NUM    	           16
+#define	Q_NAME    	               "/mq-l"
 
-int queueTest(void);
-static void notifySetup(mqd_t *mqdp);
-static void threadFunc(union sigval sv);
-static void notifySetup(mqd_t *mqdp);
+void threadFunc(union sigval sv);
+int notifySetup(mqd_t *mqdp);
 #endif //POSIX_QUEUE_POSIX_QUEUE_H

@@ -4,106 +4,49 @@
 
 #include "POSIX_Queue.h"
 
-static void threadFunc(union sigval sv) {
-    ssize_t numRead;
+void threadFunc(union sigval sv) {
+    ssize_t bytesRead;
     mqd_t *mqdp;
-    void *buffer;
+    void *buff;
+//    struct ShMem shm;
     struct ShMem *shmp;
     struct mq_attr attr;
 
     mqdp = (mqd_t *) sv.sival_ptr;
     if (mq_getattr(*mqdp, &attr) == -1) {
-        printf("ERROR: cant get attributes from queue with descriptor %d", mqdp);
+        printf("ERROR: cant get attributes from queue with descriptor %d", (int)(*mqdp));
         pthread_exit(NULL);
     }
-    buffer = malloc(attr.mq_maxmsg);
-    if (buffer == NULL) {
-        printf("ERROR: cant call malloc for buffer with size %d", attr.mq_maxmsg);
+    buff = malloc(attr.mq_msgsize);
+    if (buff == NULL) {
+        printf("ERROR: cant call malloc for buff with size %d", (int)attr.mq_maxmsg);
         pthread_exit(NULL);
     }
 
-    //notyfySetup(mqdp);
+    notifySetup(mqdp);
 
-    while ((numRead = mq_receive(*mqdp, (char*)buffer, attr.mq_msgsize, NULL)) >= 0)
+    while ((bytesRead = mq_receive(*mqdp, (char*)buff, attr.mq_msgsize, NULL)) >= 0)
     {
-        shmp = (ShMem*)(buffer);
-        printf("Read %d bytes: %s %u %f", numRead, shmp->ch_data, shmp->ui_data, shmp->fl_data);
+        shmp = (ShMem*)(buff);
+//        memcpy((void *)(&shm), buff, sizeof(shm));
+        printf("Read %ld bytes: %s %u %f\n", (long)bytesRead, shmp->ch_data, shmp->ui_data, shmp->fl_data);
+//        printf("Read %ld bytes: %s %u %f", (long)bytesRead, shm.ch_data, shm.ui_data, shm.fl_data);
     }
-
-    free(buffer);
+    free(buff);
+//    notifySetup(mqdp);
     pthread_exit(NULL);
 }
 
-int queueTest(void)
+int notifySetup(mqd_t *mqdp)
 {
-    mqd_t mqd;
-//    char q_name[] = "/mq-l";
-//
-//    if (creat_queue(&mqd, q_name) == -1)
-//    {
-//        return -1;
-//    }
-    const char q_name[] = "/mq-l2";
-
-    struct mq_attr q_attr;
-    q_attr.mq_msgsize = 14;
-    q_attr.mq_maxmsg = 32;
-    q_attr.mq_curmsgs = 0;
-    q_attr.mq_flags = 0;
-
-    int flags = O_CREAT | O_RDWR | O_NONBLOCK;
-    mode_t perms = (S_IRUSR | S_IWUSR);
-    mqd = mq_open(q_name, O_RDWR | O_CREAT | O_NONBLOCK , 0644, &q_attr);
-//     TODO: check if queue exists already
-    if (mqd == (mqd_t) -1)
-    {
-        printf("ERROR: cant create queue with name %s\n", q_name);
-        return -1;
-    }
+    struct sigevent sigEv;
+    sigEv.sigev_notify = SIGEV_THREAD;
+    sigEv.sigev_notify_function = threadFunc;
+    sigEv.sigev_notify_attributes = NULL;
+    sigEv.sigev_value.sival_ptr = mqdp;
 
 
-    struct ShMem shmem_q_l[MSGS_NUM];
-    for(auto i = 0 ; i < MSGS_NUM ; i++)
-    {
-        sprintf(shmem_q_l[i].ch_data, "test_%d", i);
-        shmem_q_l[i].ui_data = (uint)i;
-        shmem_q_l[i].fl_data = (float)i;
-    }
-    // put some message into the queue
-    mqd_t mqd_write = mq_open(q_name, O_WRONLY);
-    for(auto i = 0 ; i < MSGS_NUM ; i++)
-    {
-        if(mq_send(mqd_write, (char*)(shmem_q_l+i), sizeof(ShMem)+1, 0) == -1)
-//        if(mq_send(mqd, shmem_q_l[i].ch_data, sizeof(ShMem), 0) == -1)
-        {
-            printf("ERROR: cant send message into, code %d\n", mqd);
-        }
-    }
-
-    // read some message in the queue
-    struct ShMem shmem_buf;
-//    void *buff;
-//    buff = malloc(sizeof(ShMem));
-//    if (buff == NULL)
-//    {
-//        printf("ERROR: cant call malloc to create buffer for queue %d", q_name);
-//        return -1;
-//
-//    }
-    mqd_t mqd_read = mq_open(q_name, O_RDONLY);
-    for(auto i = 0 ; i < MSGS_NUM ; i++)
-    {
-//        mq_receive(mqd, (char*)(buff), sizeof(ShMem), 0);
-        if (mq_receive(mqd_read, (char*)(&shmem_buf), sizeof(ShMem), 0) == -1){
-            printf("ERROR: cant receive message from queue %s\n", q_name);
-//            return -1;
-        } else
-        {
-            printf("Message from queue : %s, %d, %f\n", shmem_buf.ch_data, shmem_buf.ui_data, shmem_buf.fl_data);
-        }
-
-    }
-    mq_close(mqd);
-
+    if (mq_notify(*mqdp, &sigEv))
+        return - 1;
     return 0;
 }
