@@ -50,28 +50,3 @@ int notifySetup(mqd_t *mqdp)
     return 0;
 }
 
-/* write function for work with shared memory */
-int write_thread(msg_test * msgs_arr) {
-    msg_test *msg_p;
-    uint64_t ts;
-    for (int i = 0; i < MSGS_NUM; i++){
-        // catch a data mutex
-        if (sem_wait(&msg_p->mutex) == -1)
-        {
-            printf("! !sem_wait error\n");
-
-            return SHMEM_SEMWAIT_ERROR;
-        }
-        msg_p = msgs_arr + i;
-        ts = get_timestamp_ns();
-        msg_p->ts = ts;
-        msg_p->message = (uint64_t)(i + 100);
-        // free the data mutex
-        if (sem_post(&msg_p->mutex) == -1)
-        {
-            printf("! !sem_post error\n");
-            return SHMEM_SEMPOST_ERROR;
-        }
-    }
-
-}
